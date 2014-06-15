@@ -57,7 +57,7 @@ sub _build__ua {
     my $self = shift;
 
     my $ua = Mojo::UserAgent->new;
-    $ua->transactor->name( 'stratopan-uploader/' . $self->VERSION );
+    $ua->transactor->name( $self->agent );
     return $ua;
 }
 
