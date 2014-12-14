@@ -73,8 +73,8 @@ sub release {
                           password => $self->_password
                        } );
 
-    if ( my $error = $tx->res->dom->find( 'div#page-alert p' ) ) {
-        $self->log_fatal( $error->all_text );
+    if ( my $error = $tx->res->dom->at( 'div#page-alert p' ) ) {
+        $self->log_fatal( $error->text );
     }
 
     my $submit_url = sprintf '%s/%s/%s/%s/stack/add',
@@ -93,7 +93,7 @@ sub release {
         return $self->log( "success." );
     }
 
-    $self->log_fatal( $tx->res->dom->find( 'div#page-alert p' )->all_text );
+    $self->log_fatal( $tx->res->dom->at( 'div#page-alert p' )->text );
 }
 
 
