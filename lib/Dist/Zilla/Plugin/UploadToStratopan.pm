@@ -1,6 +1,6 @@
 package Dist::Zilla::Plugin::UploadToStratopan;
 
-our $VERSION = 0.012;
+our $VERSION = 0.012001;
 
 use Moose;
 use Mojo::UserAgent;
