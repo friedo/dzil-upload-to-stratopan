@@ -67,14 +67,15 @@ sub release {
     $tarball = "$tarball";    # stringify object
 
     my $ua = $self->_ua;
+    $ua->max_redirects(3);
     my $tx = $ua->post( $self->_strato_base . '/signin',
                         form => {
                           login    => $self->_username,
                           password => $self->_password
                        } );
 
-    if ( my $error = $tx->res->dom->at( 'div#page-alert p' ) ) {
-        $self->log_fatal( $error->text );
+    if ( my $error = $tx->res->dom->find( 'div#page-alert p' )->first ) {
+        $self->log_fatal( $error->map('text')->join(" ") );
     }
 
     my $submit_url = sprintf '%s/%s/%s/%s/stack/add',
@@ -89,11 +90,11 @@ sub release {
         }
     );
 
-    if ( $tx->res->code == 302 ) {
+    if ( $tx->res->code == 302 or $tx->res->code =~ /^2/ ) {
         return $self->log( "success." );
     }
 
-    $self->log_fatal( $tx->res->dom->at( 'div#page-alert p' )->text );
+    $self->log_fatal( $tx->res->dom->find( 'div#page-alert p' )->map('text')->join(" ") );
 }
 
 
