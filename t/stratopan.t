@@ -4,7 +4,7 @@ use Test::Exception;
 use Test::Mock::One;
 use Dist::Zilla::Plugin::UploadToStratopan;
 
-plan( skip_all => 'Only run these tests on when networking is enabled' ) if $ENV{NO_NETWORK};
+plan( skip_all => 'Only run these tests on when network testing is enabled' ) if $ENV{NO_NETWORK_TESTING};
 
 my $pluginname = "UploadToStratopan";
 my $username   = $ENV{STRATOPAN_USERNAME};
@@ -30,7 +30,6 @@ my $zilla    = Test::Mock::One->new(
 
 {
     note "failure testing";
-    # Skip on no network testing
     my $stratopan = Dist::Zilla::Plugin::UploadToStratopan->new(
         zilla       => $zilla,
         repo        => $pluginname,
@@ -51,7 +50,9 @@ my $zilla    = Test::Mock::One->new(
 SKIP: {
 
     if (!$username && !$password && !$repo) {
-        skip("Skipping live tests: login", 1);
+        skip("Skipping live tests: uploading. Set STRATOPAN_USERNAME,"
+            . " STRATOPAN_PASSWORD and STRATOPAN_REPO in your env"
+            . " to enable testing", 1);
     }
 
     my $stratopan = Dist::Zilla::Plugin::UploadToStratopan->new(
@@ -72,7 +73,9 @@ SKIP: {
 
 SKIP: {
     if (!$username && !$password && !$repo && !$tarball) {
-        skip("Skipping live tests: uploading tarball", 1);
+        skip("Skipping live tests: uploading. Set STRATOPAN_USERNAME,"
+            . " STRATOPAN_PASSWORD, STRATOPAN_REPO and STRATOPAN_TARBALL"
+            . " in your env to enable testing", 1);
     }
 
     my $stratopan = Dist::Zilla::Plugin::UploadToStratopan->new(
