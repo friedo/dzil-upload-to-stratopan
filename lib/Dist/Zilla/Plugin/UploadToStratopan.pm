@@ -23,6 +23,10 @@ has stack         => ( is           => 'ro',
                        default      => 'master',
                        required     => 1 );
 
+has recurse       => ( is           => 'ro',
+                       isa          => 'Bool',
+                       default      => 0);
+
 has _strato_base  => ( is           => 'ro',
                        isa          => 'Str',
                        default      => 'https://stratopan.com' );
@@ -38,7 +42,6 @@ has _username     => ( is           => 'ro',
 has _password     => ( is           => 'ro',
                        isa          => 'Str',
                        lazy_build   => 1 );
-
 
 sub _build__username {
     my $self = shift;
@@ -61,38 +64,66 @@ sub _build__ua {
     return $ua;
 }
 
-sub release {
-    my ( $self, $tarball ) = @_;
-
-    $tarball = "$tarball";    # stringify object
+sub _login {
+    my $self = shift;
 
     my $ua = $self->_ua;
-    my $tx = $ua->post( $self->_strato_base . '/signin',
-                        form => {
-                          login    => $self->_username,
-                          password => $self->_password
-                       } );
 
+    my $tx = $ua->post(
+        $self->_strato_base . '/signin',
+        form => {
+            login    => $self->_username,
+            password => $self->_password
+        }
+    );
+
+    # stratopan redirects on a post (302)
+    # and returns some div alert thing when posting - also returning a
+    # 200
     if ( my $error = $tx->res->dom->at( 'div#page-alert p' ) ) {
         $self->log_fatal( $error->text );
     }
 
-    my $submit_url = sprintf '%s/%s/%s/%s/stack/add',
+}
+
+sub _assert_stack {
+    my ($self) = @_;
+
+    my $stack_uri = sprintf '%s/%s/%s/%s',
         $self->_strato_base, $self->_username, $self->repo, $self->stack;
+
+    my $tx = $self->_ua->get($stack_uri);
+
+    if ( $tx->res->code == 200 ) {
+        return $stack_uri;
+    }
+    $self->log_fatal(sprintf("Stack %s does not exist in repo '%s', create it first", $self->stack, $self->repo));
+
+}
+
+sub release {
+    my ( $self, $tarball ) = @_;
+
+    $tarball = "$tarball";    # stringify object
+    $self->log_fatal("No tarball found with name $tarball") unless $tarball;
+
+    $self->_login;
+    my $ua = $self->_ua;
+
+    my $submit_url = join('/', $self->_assert_stack, qw(stack add));
 
     $self->log( [ "uploading %s to %s", $tarball, $submit_url ] );
 
-    $tx = $ua->post( $submit_url,
+    my $tx = $ua->post( $submit_url,
         form => {
-            recurse    => 1,
+            recurse    => $self->recurse,
+            message    => "Uploaded by " .  __PACKAGE__,
             archive    => { file => $tarball }
         }
     );
-
     if ( $tx->res->code == 302 ) {
         return $self->log( "success." );
     }
-
     $self->log_fatal( $tx->res->dom->at( 'div#page-alert p' )->text );
 }
 
@@ -142,6 +173,11 @@ The name of the Stratopan repository. Required.
 
 The name of the stack within your repository to which you want to upload. The
 default is C<master>.
+
+=head2 recurse
+
+Recursively pull all prerequisites too when true, defaults to only uploading
+the intented modules
 
 =head1 AUTHOR
 
