@@ -10,57 +10,72 @@ with 'Dist::Zilla::Role::Releaser';
 
 # ABSTRACT: Automate Stratopan releases with Dist::Zilla
 
-has agent         => ( is           => 'ro',
-                       isa          => 'Str',
-                       default      => 'stratopan-uploader/' . $VERSION );
+has agent => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => 'stratopan-uploader/' . $VERSION
+);
 
-has repo          => ( is           => 'ro',
-                       isa          => 'Str',
-                       required     => 1 );
+has repo => (
+    is       => 'ro',
+    isa      => 'Str',
+    required => 1
+);
 
-has stack         => ( is           => 'ro',
-                       isa          => 'Str',
-                       default      => 'master',
-                       required     => 1 );
+has stack => (
+    is       => 'ro',
+    isa      => 'Str',
+    default  => 'master',
+    required => 1
+);
 
-has recurse       => ( is           => 'ro',
-                       isa          => 'Bool',
-                       default      => 0);
+has recurse => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0
+);
 
-has _strato_base  => ( is           => 'ro',
-                       isa          => 'Str',
-                       default      => 'https://stratopan.com' );
+has _strato_base => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => 'https://stratopan.com'
+);
 
-has _ua           => ( is           => 'ro',
-                       isa          => 'Mojo::UserAgent',
-                       lazy_build   => 1 );
+has _ua => (
+    is         => 'ro',
+    isa        => 'Mojo::UserAgent',
+    lazy_build => 1
+);
 
-has _username     => ( is           => 'ro',
-                       isa          => 'Str',
-                       lazy_build   => 1 );
+has _username => (
+    is         => 'ro',
+    isa        => 'Str',
+    lazy_build => 1
+);
 
-has _password     => ( is           => 'ro',
-                       isa          => 'Str',
-                       lazy_build   => 1 );
+has _password => (
+    is         => 'ro',
+    isa        => 'Str',
+    lazy_build => 1
+);
 
 sub _build__username {
     my $self = shift;
 
-    return $self->zilla->chrome->prompt_str( "Stratopan username: " );
+    return $self->zilla->chrome->prompt_str("Stratopan username: ");
 }
 
 sub _build__password {
     my $self = shift;
-    return $self->zilla->chrome->prompt_str(
-               "Stratopan password: ", { noecho => 1 }
-           );
+    return $self->zilla->chrome->prompt_str("Stratopan password: ",
+        { noecho => 1 });
 }
 
 sub _build__ua {
     my $self = shift;
 
     my $ua = Mojo::UserAgent->new;
-    $ua->transactor->name( $self->agent );
+    $ua->transactor->name($self->agent);
     return $ua;
 }
 
@@ -80,8 +95,8 @@ sub _login {
     # stratopan redirects on a post (302)
     # and returns some div alert thing when posting - also returning a
     # 200
-    if ( my $error = $tx->res->dom->at( 'div#page-alert p' ) ) {
-        $self->log_fatal( $error->text );
+    if (my $error = $tx->res->dom->at('div#page-alert p')) {
+        $self->log_fatal($error->text);
     }
 
 }
@@ -94,15 +109,20 @@ sub _assert_stack {
 
     my $tx = $self->_ua->get($stack_uri);
 
-    if ( $tx->res->code == 200 ) {
+    if ($tx->res->code == 200) {
         return $stack_uri;
     }
-    $self->log_fatal(sprintf("Stack %s does not exist in repo '%s', create it first", $self->stack, $self->repo));
+    $self->log_fatal(
+        sprintf(
+            "Stack %s does not exist in repo '%s', create it first",
+            $self->stack, $self->repo
+        )
+    );
 
 }
 
 sub release {
-    my ( $self, $tarball ) = @_;
+    my ($self, $tarball) = @_;
 
     $tarball = "$tarball";    # stringify object
     $self->log_fatal("No tarball found with name $tarball") unless $tarball;
@@ -112,19 +132,21 @@ sub release {
 
     my $submit_url = join('/', $self->_assert_stack, qw(stack add));
 
-    $self->log( [ "uploading %s to %s", $tarball, $submit_url ] );
+    $self->log(["uploading %s to %s", $tarball, $submit_url]);
 
-    my $tx = $ua->post( $submit_url,
+    my $tx = $ua->post(
+        $submit_url,
         form => {
-            recurse    => $self->recurse,
-            message    => "Uploaded by " .  __PACKAGE__,
-            archive    => { file => $tarball }
+            recurse => $self->recurse,
+            message => "Uploaded by " . __PACKAGE__,
+            archive => { file => $tarball }
         }
     );
-    if ( $tx->res->code == 302 ) {
-        return $self->log( "success." );
+
+    if ($tx->res->code == 302) {
+        return $self->log("success.");
     }
-    $self->log_fatal( $tx->res->dom->at( 'div#page-alert p' )->text );
+    $self->log_fatal($tx->res->dom->at('div#page-alert p')->text);
 }
 
 
@@ -144,8 +166,9 @@ Dist::Zilla::Plugin::UploadToStratopan - Automate Stratopan releases with Dist::
 In your C<dist.ini>:
 
     [UploadToStratopan]
-    repo  = myrepo
-    stack = master
+    repo    = myrepo
+    stack   = master
+    recurse = 1 ;defaults to 0
 
 =head1 DESCRIPTION
 
@@ -178,6 +201,12 @@ default is C<master>.
 
 Recursively pull all prerequisites too when true, defaults to only uploading
 the intented modules
+
+=head1 METHODS
+
+=head2 release
+
+Release the modeule
 
 =head1 AUTHOR
 
